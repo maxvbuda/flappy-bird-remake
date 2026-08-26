@@ -285,127 +285,144 @@
     const rot = Math.min(Math.PI / 3.5, Math.max(-Math.PI / 4, bird.vy * 0.06 - 0.12));
     ctx.rotate(rot);
 
-    // tail feathers (spread crow tail)
-    ctx.fillStyle = '#212121';
-    ctx.strokeStyle = '#000';
+    const bodyDark = '#1a237e';
+    const bodyMid = '#283593';
+    const bodyLight = '#5c6bc0';
+    const featherDark = '#0d47a1';
+    const outline = '#000051';
+
+    // tail feathers (spread flight tail)
+    ctx.strokeStyle = outline;
     ctx.lineWidth = 1.5;
     for (let i = 0; i < 3; i++) {
       ctx.save();
-      ctx.translate(-12, -5 + i * 5);
-      ctx.rotate(-0.45 + i * 0.25);
+      ctx.translate(-12, -6 + i * 6);
+      ctx.rotate(-0.5 + i * 0.3);
+      const tg = ctx.createLinearGradient(-18, 0, 0, 0);
+      tg.addColorStop(0, featherDark);
+      tg.addColorStop(1, bodyDark);
+      ctx.fillStyle = tg;
       ctx.beginPath();
-      ctx.ellipse(-8, 0, 13, 4.5, 0, 0, Math.PI * 2);
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(-10, -3, -22, 0);
+      ctx.quadraticCurveTo(-10, 3, 0, 0);
       ctx.fill();
       ctx.stroke();
       ctx.restore();
     }
 
     // body
-    const bg = ctx.createRadialGradient(-5, -6, 4, 0, 2, 17);
-    bg.addColorStop(0, '#616161');
-    bg.addColorStop(0.45, '#333333');
-    bg.addColorStop(1, '#000000');
+    const bg = ctx.createRadialGradient(-4, -5, 3, 0, 2, 17);
+    bg.addColorStop(0, bodyLight);
+    bg.addColorStop(0.5, bodyMid);
+    bg.addColorStop(1, bodyDark);
     ctx.fillStyle = bg;
     ctx.beginPath();
     ctx.arc(0, 3, 16, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#000';
+    ctx.strokeStyle = outline;
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    // far wing (tip visible behind back)
+    // body sheen (low-poly style)
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.beginPath();
+    ctx.moveTo(-8, 0);
+    ctx.lineTo(0, -10);
+    ctx.lineTo(8, -2);
+    ctx.lineTo(2, 8);
+    ctx.closePath();
+    ctx.fill();
+
+    // far wing (small tip behind back)
     ctx.save();
     ctx.translate(4, 0);
     ctx.rotate(-0.4);
-    ctx.fillStyle = '#1a1a1a';
-    ctx.strokeStyle = '#000';
+    ctx.fillStyle = featherDark;
+    ctx.strokeStyle = outline;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    ctx.quadraticCurveTo(12, -24, 30, -14);
-    ctx.quadraticCurveTo(18, -4, 6, 2);
+    ctx.lineTo(12, -22);
+    ctx.lineTo(26, -12);
+    ctx.lineTo(14, -4);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
     ctx.restore();
 
-    // near wing (main flight wing, raised and flapping)
+    // near wing (layered flight feathers)
     const flapSpeed = 0.3;
-    const wingAngle = gameOver ? -0.6 : -0.75 + Math.sin((frame - lastFlap) * flapSpeed) * 0.45;
+    const wingAngle = gameOver ? -0.55 : -0.7 + Math.sin((frame - lastFlap) * flapSpeed) * 0.4;
     ctx.save();
     ctx.translate(-5, 5);
     ctx.rotate(wingAngle);
-    ctx.fillStyle = '#212121';
-    ctx.strokeStyle = '#000';
+    ctx.strokeStyle = outline;
     ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.quadraticCurveTo(10, -34, 38, -18); // leading edge
-    ctx.lineTo(26, -8);
-    ctx.quadraticCurveTo(12, -4, 0, 0); // trailing edge
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    // primary feathers
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(4, -4);
-    ctx.quadraticCurveTo(16, -28, 36, -17);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(10, -5);
-    ctx.quadraticCurveTo(18, -24, 30, -14);
-    ctx.stroke();
+    for (let i = 0; i < 3; i++) {
+      const wg = ctx.createLinearGradient(0, 0, 30, -20);
+      wg.addColorStop(0, bodyMid);
+      wg.addColorStop(1, featherDark);
+      ctx.fillStyle = wg;
+      ctx.beginPath();
+      ctx.moveTo(2, 2);
+      ctx.lineTo(12 + i * 4, -28 - i * 3);
+      ctx.lineTo(34 + i * 2, -14 - i * 2);
+      ctx.lineTo(22, -2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
     ctx.restore();
 
     // head
-    const hx = 3, hy = -12;
+    const hx = 2, hy = -12;
     const hg = ctx.createRadialGradient(hx - 2, hy - 3, 2, hx, hy, 12);
-    hg.addColorStop(0, '#616161');
-    hg.addColorStop(0.55, '#333333');
-    hg.addColorStop(1, '#000000');
+    hg.addColorStop(0, bodyLight);
+    hg.addColorStop(0.55, bodyMid);
+    hg.addColorStop(1, bodyDark);
     ctx.fillStyle = hg;
     ctx.beginPath();
     ctx.arc(hx, hy, 12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#000';
+    ctx.strokeStyle = outline;
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    // beak (crow beak, pointed and dark)
-    ctx.fillStyle = '#1a1a1a';
+    // beak (large pointed dark beak)
+    ctx.fillStyle = '#0a0a0a';
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(hx + 10, hy - 2);
-    ctx.lineTo(hx + 24, hy + 1);
-    ctx.lineTo(hx + 10, hy + 4);
+    ctx.moveTo(hx + 9, hy - 3);
+    ctx.lineTo(hx + 30, hy + 1);
+    ctx.lineTo(hx + 9, hy + 5);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
     // beak highlight
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(hx + 12, hy - 1);
-    ctx.lineTo(hx + 20, hy + 1);
+    ctx.lineTo(hx + 24, hy + 1);
     ctx.stroke();
 
-    // eye (sharp white eye with black pupil)
+    // eye (prominent white eye with black pupil)
     ctx.fillStyle = '#fff';
     ctx.beginPath();
-    ctx.arc(hx + 5, hy - 4, 5.5, 0, Math.PI * 2);
+    ctx.arc(hx + 5, hy - 5, 6, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 1.5;
     ctx.stroke();
     ctx.fillStyle = '#000';
     ctx.beginPath();
-    ctx.arc(hx + 7, hy - 4, 2.5, 0, Math.PI * 2);
+    ctx.arc(hx + 7, hy - 5, 2.8, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.beginPath();
-    ctx.arc(hx + 8, hy - 5.5, 1.5, 0, Math.PI * 2);
+    ctx.arc(hx + 8.5, hy - 6.5, 1.8, 0, Math.PI * 2);
     ctx.fill();
 
     // soft shadow under the bird
