@@ -261,8 +261,8 @@
       // Update score pop
       if (scorePop > 0) scorePop--;
       
-      // Update flash effect
-      if (flashEffect > 0) flashEffect *= 0.9;
+      // Update flash effect (fade out faster)
+      if (flashEffect > 0) flashEffect *= 0.85;
       
       // Random wind changes
       if (frame % 120 === 0) {
@@ -296,8 +296,8 @@
     // Screen shake on death
     screenShake.intensity = 15;
     
-    // Flash effect
-    flashEffect = 1;
+    // Flash effect (much shorter and less intense)
+    flashEffect = 0.3;
   }
 
   function addFlapParticles() {
@@ -1535,9 +1535,9 @@
     drawScore();
     drawOverlay();
     
-    // Flash effect
+    // Flash effect (red flash for death impact)
     if (flashEffect > 0.01) {
-      ctx.fillStyle = `rgba(255, 255, 255, ${flashEffect})`;
+      ctx.fillStyle = `rgba(255, 50, 50, ${flashEffect})`;
       ctx.fillRect(-screenShake.x, -screenShake.y, W(), H());
     }
     
