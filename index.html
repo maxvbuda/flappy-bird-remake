@@ -68,10 +68,12 @@
   let flashEffect = 0;
   let butterflies = [];
   let dragonflies = [];
+  let hawks = [];
+  let difficultyMultiplier = 1;
 
   const GAP = 165;
   const PIPE_W = 60;
-  const PIPE_S = 2.6;
+  const PIPE_S = 4.5;
 
   function initClouds() {
     clouds = [];
@@ -144,6 +146,50 @@
     }
   }
 
+  function initHawks() {
+    hawks = [];
+  }
+
+  function spawnHawk() {
+    // Only spawn 1 hawk at a time and reduce spawn rate
+    if (hawks.length < 1 && Math.random() < 0.15 * difficultyMultiplier) {
+      // Find a safe spawn position that doesn't block pipe gaps
+      let safeY = Math.random() * (H() - GROUND_H - 100) + 50;
+      
+      // Check if this position would block a pipe gap
+      const wouldBlockGap = pipes.some(p => {
+        const gapTop = p.topH;
+        const gapBottom = p.topH + GAP;
+        const hawkTop = safeY - 30;
+        const hawkBottom = safeY + 30;
+        // Don't spawn if hawk would be in the middle of a gap
+        return (hawkTop < gapBottom && hawkBottom > gapTop) && 
+               (hawkTop > gapTop || hawkBottom < gapBottom);
+      });
+      
+      // If would block gap, spawn above or below instead
+      if (wouldBlockGap && pipes.length > 0) {
+        const pipe = pipes[0];
+        if (Math.random() > 0.5) {
+          safeY = pipe.topH - 50; // Spawn above gap
+        } else {
+          safeY = pipe.topH + GAP + 50; // Spawn below gap
+        }
+      }
+      
+      hawks.push({
+        x: W() + 100,
+        y: safeY,
+        vx: -3 - Math.random() * 1, // Slower speed
+        vy: (Math.random() - 0.5) * 1, // Less vertical movement
+        wingPhase: 0,
+        size: 20 + Math.random() * 8, // Slightly smaller
+        state: 'patrol', // Start in patrol mode instead of hunting
+        targetY: bird.y
+      });
+    }
+  }
+
   function reset() {
     bird.x = W() * 0.22;
     bird.y = H() / 2;
@@ -161,14 +207,225 @@
     flashEffect = 0;
     windStrength = 0;
     birdTrail = [];
+    difficultyMultiplier = 1;
     initClouds();
     initStars();
     initParticles();
     initRain();
     initButterflies();
     initDragonflies();
+    initHawks();
   }
   reset();
+
+  // ================= FLAPPY BIRD BOT =================
+  let botEnabled = false;
+  let botTargetY = 0;
+  let botRestartTime = 0;
+  let botUnlocked = false;
+
+  // Check URL parameter for bot unlock
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('botunlock') === 'iwantabot') {
+    botUnlocked = true;
+  }
+
+  function toggleBot() {
+    if (!botUnlocked) return;
+    botEnabled = !botEnabled;
+
+    if (botEnabled) {
+      if (gameOver) reset();
+      if (!started) flap();
+    }
+  }
+
+  function updateBot() {
+    if (!botEnabled || !botUnlocked) return;
+
+    // Automatically restart after losing.
+    if (gameOver) {
+      if (!botRestartTime) {
+        botRestartTime = performance.now() + 700;
+      }
+
+      if (performance.now() >= botRestartTime) {
+        reset();
+        botRestartTime = 0;
+        flap();
+      }
+
+      return;
+    }
+
+    if (!started) {
+      flap();
+      return;
+    }
+
+    const ceiling = 38;
+    const floor = H() - GROUND_H - 38;
+
+    // Find the next pipe that has not passed the bird.
+    const nextPipe = pipes
+      .filter(pipe => pipe.x + PIPE_W > bird.x - bird.w / 2)
+      .sort((a, b) => a.x - b.x)[0];
+
+    let targetY = H() * 0.52;
+    let safeTop = ceiling;
+    let safeBottom = floor;
+
+    if (nextPipe) {
+      const gapCenter = nextPipe.topH + GAP / 2;
+
+      // Aim slightly below the center so there is room to flap upward.
+      targetY = gapCenter + 14;
+
+      // Safe flying area inside the pipe opening.
+      safeTop = nextPipe.topH + bird.h / 2 + 14;
+      safeBottom = nextPipe.topH + GAP - bird.h / 2 - 14;
+    }
+
+    // Find approaching hawks.
+    const threats = hawks.filter(
+      hawk =>
+        hawk.x > bird.x - 70 &&
+        hawk.x < bird.x + 360
+    );
+
+    if (threats.length > 0) {
+      // Possible safe heights inside the pipe opening.
+      const candidates = [
+        safeTop,
+        safeTop + (safeBottom - safeTop) * 0.25,
+        (safeTop + safeBottom) / 2,
+        safeTop + (safeBottom - safeTop) * 0.75,
+        safeBottom
+      ];
+
+      let bestTarget = targetY;
+      let bestScore = -Infinity;
+
+      for (const candidate of candidates) {
+        let closestHawkDistance = Infinity;
+
+        for (const hawk of threats) {
+          // Predict when and where the hawk will cross the bird.
+          const hawkSpeed = Math.max(2, -hawk.vx);
+
+          const framesUntilCrossing = Math.max(
+            0,
+            Math.min(90, (hawk.x - bird.x) / hawkSpeed)
+          );
+
+          const predictedHawkY = Math.max(
+            50,
+            Math.min(
+              floor,
+              hawk.y + hawk.vy * framesUntilCrossing
+            )
+          );
+
+          closestHawkDistance = Math.min(
+            closestHawkDistance,
+            Math.abs(candidate - predictedHawkY)
+          );
+        }
+
+        // Prefer distance from hawks, but avoid unnecessary movement.
+        const score =
+          closestHawkDistance -
+          Math.abs(candidate - bird.y) * 0.12;
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestTarget = candidate;
+        }
+      }
+
+      targetY = bestTarget;
+    }
+
+    targetY = Math.max(
+      ceiling,
+      Math.min(floor, targetY)
+    );
+
+    botTargetY = targetY;
+
+    /*
+     * Screen Y increases downward:
+     * bird.y > targetY means the bird is below the target.
+     * bird.y < targetY means it should deliberately fall.
+     */
+
+    const belowTarget = bird.y > targetY + 10;
+
+    // Brake only when close to the target and falling quickly.
+    const brakingNearTarget =
+      bird.y >= targetY - 4 &&
+      bird.vy > 5.2;
+
+    const flapReady = frame - lastFlap >= 6;
+    const nearGround = bird.y > floor - 20;
+
+    if (
+      flapReady &&
+      (belowTarget || brakingNearTarget || nearGround)
+    ) {
+      flap();
+    }
+  }
+
+  // Add bot toggle button if unlocked
+  if (botUnlocked) {
+    const botButton = document.createElement('button');
+    botButton.textContent = '🤖 Bot: OFF';
+    botButton.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+      z-index: 1000;
+    `;
+    botButton.addEventListener('click', toggleBot);
+    botButton.addEventListener('mouseenter', () => {
+      botButton.style.transform = 'scale(1.05)';
+      botButton.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
+    });
+    botButton.addEventListener('mouseleave', () => {
+      botButton.style.transform = 'scale(1)';
+      botButton.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+    });
+    document.body.appendChild(botButton);
+
+    // Update button text when bot state changes
+    const originalToggleBot = toggleBot;
+    toggleBot = function() {
+      originalToggleBot();
+      botButton.textContent = botEnabled ? '🤖 Bot: ON' : '🤖 Bot: OFF';
+      botButton.style.background = botEnabled 
+        ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+        : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    };
+
+    // Keyboard shortcut
+    window.addEventListener('keydown', event => {
+      if (event.code === 'KeyB') {
+        event.preventDefault();
+        toggleBot();
+      }
+    });
+  }
 
   function flap() {
     if (gameOver) {
@@ -192,7 +449,20 @@
   }
 
   function update() {
-    if (gameOver) return;
+    // Call bot update before physics
+    updateBot();
+
+    if (gameOver) {
+      // Still update flash effect even when game over
+      if (flashEffect > 0) flashEffect *= 0.85;
+      if (screenShake.intensity > 0) {
+        screenShake.x = (Math.random() - 0.5) * screenShake.intensity;
+        screenShake.y = (Math.random() - 0.5) * screenShake.intensity;
+        screenShake.intensity *= 0.9;
+        if (screenShake.intensity < 0.5) screenShake.intensity = 0;
+      }
+      return;
+    }
 
     if (started) {
       bird.vy += bird.gravity;
@@ -208,10 +478,27 @@
         bird.vy = 0;
       }
 
-      if (frame % 105 === 0) spawnPipe();
+      if (frame % 100 === 0) spawnPipe();
+      
+      // Increase difficulty over time
+      difficultyMultiplier = 1 + (score * 0.08);
+      
+      // Spawn hawks periodically (more frequent as score increases)
+      const hawkSpawnRate = Math.max(120, 240 - score * 10);
+      if (frame % Math.floor(hawkSpawnRate) === 0) spawnHawk();
 
       for (let p of pipes) {
-        p.x -= PIPE_S;
+        p.x -= PIPE_S * difficultyMultiplier;
+        
+        // Add vertical movement to pipes for extra difficulty
+        if (!p.vy) p.vy = (Math.random() - 0.5) * 0.5;
+        p.topH += p.vy;
+        
+        // Keep pipes within bounds
+        const minTop = 60;
+        const maxTop = H() - GROUND_H - GAP - minTop - 30;
+        if (p.topH < minTop || p.topH > maxTop) p.vy *= -1;
+        
         if (!p.passed && p.x + PIPE_W < bird.x) {
           p.passed = true;
           score++;
@@ -226,9 +513,9 @@
       }
       pipes = pipes.filter(p => p.x + PIPE_W > -30);
 
-      groundOffset -= PIPE_S;
+      groundOffset -= PIPE_S * difficultyMultiplier;
       if (groundOffset <= -24) groundOffset += 24;
-      bgOffset -= PIPE_S * 0.25;
+      bgOffset -= PIPE_S * 0.25 * difficultyMultiplier;
       if (bgOffset <= -24) bgOffset += 24;
 
       for (let c of clouds) {
@@ -284,6 +571,9 @@
     // Update creatures
     updateButterflies();
     updateDragonflies();
+    
+    // Update hawks
+    updateHawks();
   }
 
   function endGame() {
@@ -390,6 +680,80 @@
         d.y = Math.random() * (H() * 0.5);
       }
     });
+  }
+
+  function updateHawks() {
+    hawks.forEach(h => {
+      h.wingPhase += 0.15;
+      
+      // AI behavior - less aggressive
+      const dx = bird.x - h.x;
+      const dy = bird.y - h.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (h.state === 'patrol') {
+        // Gentle patrol pattern
+        h.vy += Math.sin(frame * 0.03) * 0.03;
+        
+        // Only chase if very close and not blocking a gap
+        if (dist < 200) {
+          // Check if chasing would block a pipe gap
+          const wouldBlockGap = pipes.some(p => {
+            const gapTop = p.topH;
+            const gapBottom = p.topH + GAP;
+            const predictedY = h.y + (dy / dist) * 10;
+            return predictedY > gapTop && predictedY < gapBottom;
+          });
+          
+          if (!wouldBlockGap) {
+            h.vy += (dy / dist) * 0.02; // Very gentle chase
+          }
+        }
+      }
+      
+      // Speed limits (slower overall)
+      h.vx = Math.max(-4, Math.min(-2, h.vx));
+      h.vy = Math.max(-1, Math.min(1, h.vy));
+      
+      h.x += h.vx;
+      h.y += h.vy;
+      
+      // Keep hawk in bounds and away from pipe gaps
+      if (h.y < 50) h.vy = Math.abs(h.vy);
+      if (h.y > H() - GROUND_H - 50) h.vy = -Math.abs(h.vy);
+      
+      // Avoid blocking pipe gaps
+      pipes.forEach(p => {
+        const gapTop = p.topH;
+        const gapBottom = p.topH + GAP;
+        const hawkTop = h.y - 25;
+        const hawkBottom = h.y + 25;
+        
+        // If hawk is in a gap, push it out
+        if (hawkTop < gapBottom && hawkBottom > gapTop) {
+          if (h.y < (gapTop + gapBottom) / 2) {
+            h.vy = -Math.abs(h.vy) - 0.5; // Push up
+          } else {
+            h.vy = Math.abs(h.vy) + 0.5; // Push down
+          }
+        }
+      });
+      
+      // Check collision with bird
+      if (checkHawkCollision(h)) {
+        endGame();
+      }
+    });
+    
+    // Remove hawks that are off screen
+    hawks = hawks.filter(h => h.x > -100);
+  }
+
+  function checkHawkCollision(hawk) {
+    const dx = bird.x - hawk.x;
+    const dy = bird.y - hawk.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    return dist < (hawk.size + bird.w / 2);
   }
 
   function drawParticles() {
@@ -527,6 +891,125 @@
       ctx.beginPath();
       ctx.ellipse(0, 0, d.size * 0.15, d.size * 1.2, 0, 0, Math.PI * 2);
       ctx.fill();
+      
+      ctx.restore();
+    });
+  }
+
+  function drawHawks() {
+    hawks.forEach(h => {
+      ctx.save();
+      ctx.translate(h.x, h.y);
+      
+      // Face the direction of movement
+      const angle = Math.atan2(h.vy, h.vx);
+      ctx.rotate(angle);
+      
+      const wingFlap = Math.sin(h.wingPhase) * 0.4;
+      
+      // Body
+      const bodyGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, h.size);
+      bodyGradient.addColorStop(0, '#5d4037');
+      bodyGradient.addColorStop(0.7, '#3e2723');
+      bodyGradient.addColorStop(1, '#1b0000');
+      ctx.fillStyle = bodyGradient;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, h.size, h.size * 0.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Wings
+      ctx.fillStyle = '#4e342e';
+      ctx.strokeStyle = '#1b0000';
+      ctx.lineWidth = 2;
+      
+      // Left wing
+      ctx.save();
+      ctx.translate(-h.size * 0.3, 0);
+      ctx.rotate(-0.3 + wingFlap);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(-h.size * 0.5, -h.size * 0.8, -h.size * 1.2, -h.size * 0.3);
+      ctx.quadraticCurveTo(-h.size * 0.5, 0, 0, 0);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+      
+      // Right wing
+      ctx.save();
+      ctx.translate(-h.size * 0.3, 0);
+      ctx.rotate(0.3 - wingFlap);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(-h.size * 0.5, h.size * 0.8, -h.size * 1.2, h.size * 0.3);
+      ctx.quadraticCurveTo(-h.size * 0.5, 0, 0, 0);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+      
+      // Head
+      ctx.fillStyle = '#3e2723';
+      ctx.beginPath();
+      ctx.arc(h.size * 0.8, 0, h.size * 0.25, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Beak (hooked predator beak)
+      ctx.fillStyle = '#ffcc80';
+      ctx.strokeStyle = '#e65100';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(h.size * 0.95, -h.size * 0.05);
+      ctx.quadraticCurveTo(h.size * 1.3, 0, h.size * 1.2, h.size * 0.1);
+      ctx.quadraticCurveTo(h.size * 1.1, h.size * 0.05, h.size * 0.95, -h.size * 0.05);
+      ctx.fill();
+      ctx.stroke();
+      
+      // Eye (menacing red eye)
+      ctx.fillStyle = '#b71c1c';
+      ctx.beginPath();
+      ctx.arc(h.size * 0.85, -h.size * 0.05, h.size * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Eye pupil
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(h.size * 0.87, -h.size * 0.05, h.size * 0.04, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Talons
+      ctx.fillStyle = '#ffcc80';
+      ctx.strokeStyle = '#e65100';
+      ctx.lineWidth = 1;
+      
+      for (let i = -1; i <= 1; i++) {
+        ctx.save();
+        ctx.translate(-h.size * 0.7, i * h.size * 0.15);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-h.size * 0.2, h.size * 0.3);
+        ctx.lineTo(-h.size * 0.1, h.size * 0.25);
+        ctx.lineTo(0, h.size * 0.35);
+        ctx.lineTo(h.size * 0.1, h.size * 0.25);
+        ctx.lineTo(h.size * 0.2, h.size * 0.3);
+        ctx.lineTo(0, 0);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      
+      // Warning glow when close
+      const dx = bird.x - h.x;
+      const dy = bird.y - h.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 200) {
+        ctx.shadowColor = 'rgba(255, 0, 0, 0.8)';
+        ctx.shadowBlur = 20;
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, h.size * 1.5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
       
       ctx.restore();
     });
@@ -1439,12 +1922,8 @@
       const cx = (W() - cw) / 2;
       const cy = (H() - ch) / 2;
 
-      // Animated panel appearance
-      const panelScale = Math.min(1, (frame % 60) / 30);
+      // No animation - just show the panel at full size
       ctx.save();
-      ctx.translate(cx + cw / 2, cy + ch / 2);
-      ctx.scale(panelScale, panelScale);
-      ctx.translate(-(cx + cw / 2), -(cy + ch / 2));
 
       drawRoundedRect(cx + 6, cy + 8, cw, ch, 18, 'rgba(0,0,0,0.3)', null);
       drawRoundedRect(cx, cy, cw, ch, 18, '#e8d5a3', '#8d6e63');
@@ -1532,6 +2011,7 @@
     drawRain();
     drawButterflies();
     drawDragonflies();
+    drawHawks();
     drawScore();
     drawOverlay();
     
