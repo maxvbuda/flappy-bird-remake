@@ -285,36 +285,33 @@
     const rot = Math.min(Math.PI / 3.5, Math.max(-Math.PI / 4, bird.vy * 0.06));
     ctx.rotate(rot);
 
-    // tail
-    ctx.fillStyle = '#e65100';
-    ctx.strokeStyle = '#bf360c';
+    // tail feathers (crow fan)
+    ctx.fillStyle = '#212121';
+    ctx.strokeStyle = '#000';
     ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(-14, -3);
-    ctx.quadraticCurveTo(-26, -7, -25, 0);
-    ctx.quadraticCurveTo(-26, 7, -14, 3);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+    for (let i = 0; i < 3; i++) {
+      ctx.save();
+      ctx.translate(-12, -4 + i * 4);
+      ctx.rotate(-0.35 + i * 0.2);
+      ctx.beginPath();
+      ctx.ellipse(-8, 0, 12, 4.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // body
-    const bg = ctx.createRadialGradient(-4, -5, 4, 0, 2, 17);
-    bg.addColorStop(0, '#fff176');
-    bg.addColorStop(0.5, '#fdd835');
-    bg.addColorStop(1, '#fbc02d');
+    const bg = ctx.createRadialGradient(-5, -6, 4, 0, 2, 17);
+    bg.addColorStop(0, '#616161');
+    bg.addColorStop(0.45, '#333333');
+    bg.addColorStop(1, '#000000');
     ctx.fillStyle = bg;
     ctx.beginPath();
     ctx.arc(0, 3, 16, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#f57f17';
+    ctx.strokeStyle = '#000';
     ctx.lineWidth = 2.5;
     ctx.stroke();
-
-    // belly patch
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.beginPath();
-    ctx.ellipse(-3, 9, 9, 6, 0.2, 0, Math.PI * 2);
-    ctx.fill();
 
     // wing
     const flapSpeed = 0.3;
@@ -322,54 +319,58 @@
     ctx.save();
     ctx.translate(-5, 5);
     ctx.rotate(wingAngle);
-    ctx.fillStyle = '#fff';
-    ctx.strokeStyle = '#f57f17';
+    ctx.fillStyle = '#212121';
+    ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.ellipse(0, 0, 12, 8, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+    // wing sheen
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.beginPath();
+    ctx.ellipse(2, -2, 6, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
 
     // head
     const hx = 3, hy = -12;
     const hg = ctx.createRadialGradient(hx - 2, hy - 3, 2, hx, hy, 12);
-    hg.addColorStop(0, '#fff176');
-    hg.addColorStop(0.55, '#fdd835');
-    hg.addColorStop(1, '#fbc02d');
+    hg.addColorStop(0, '#616161');
+    hg.addColorStop(0.55, '#333333');
+    hg.addColorStop(1, '#000000');
     ctx.fillStyle = hg;
     ctx.beginPath();
     ctx.arc(hx, hy, 12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#f57f17';
+    ctx.strokeStyle = '#000';
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    // beak (upper and lower)
-    ctx.fillStyle = '#ff9800';
-    ctx.strokeStyle = '#e65100';
+    // beak (crow beak, pointed and dark)
+    ctx.fillStyle = '#1a1a1a';
+    ctx.strokeStyle = '#000';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(hx + 10, hy - 3);
-    ctx.lineTo(hx + 21, hy);
-    ctx.lineTo(hx + 10, hy + 1);
+    ctx.moveTo(hx + 10, hy - 2);
+    ctx.lineTo(hx + 24, hy + 1);
+    ctx.lineTo(hx + 10, hy + 4);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = '#e65100';
+    // beak highlight
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.beginPath();
-    ctx.moveTo(hx + 10, hy + 1);
-    ctx.lineTo(hx + 19, hy);
-    ctx.lineTo(hx + 10, hy + 5);
-    ctx.closePath();
-    ctx.fill();
+    ctx.moveTo(hx + 12, hy - 1);
+    ctx.lineTo(hx + 20, hy + 1);
+    ctx.stroke();
 
-    // eye
+    // eye (sharp white eye with black pupil)
     ctx.fillStyle = '#fff';
     ctx.beginPath();
     ctx.arc(hx + 5, hy - 4, 5.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#f57f17';
+    ctx.strokeStyle = '#000';
     ctx.lineWidth = 1.5;
     ctx.stroke();
     ctx.fillStyle = '#000';
@@ -382,7 +383,7 @@
     ctx.fill();
 
     // soft shadow under the bird
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.beginPath();
     ctx.ellipse(0, 22, 14, 5, 0, 0, Math.PI * 2);
     ctx.fill();
