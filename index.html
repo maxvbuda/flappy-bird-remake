@@ -285,26 +285,29 @@
     const rot = Math.min(Math.PI / 3.5, Math.max(-Math.PI / 4, bird.vy * 0.06));
     ctx.rotate(rot);
 
-    // drop shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    // soft shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.beginPath();
-    ctx.ellipse(4, 7, bird.w / 2 - 1, bird.h / 2 - 2, 0, 0, Math.PI * 2);
+    ctx.ellipse(3, 8, bird.w / 2 - 1, bird.h / 2 - 2, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // tail feather
-    ctx.fillStyle = '#d84315';
-    ctx.strokeStyle = '#bf360c';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-12, 1);
-    ctx.quadraticCurveTo(-26, -4, -28, 2);
-    ctx.quadraticCurveTo(-26, 8, -12, 5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+    // tail feathers (bird-like, layered, not a stinger)
+    ctx.fillStyle = '#fbc02d';
+    ctx.strokeStyle = '#f57f17';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 3; i++) {
+      ctx.save();
+      ctx.translate(-10, -3 + i * 3);
+      ctx.rotate(-0.25 + i * 0.15);
+      ctx.beginPath();
+      ctx.ellipse(-6, 0, 10, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // body
-    const g = ctx.createRadialGradient(-5, -8, 4, 0, 0, 17);
+    const g = ctx.createRadialGradient(-5, -7, 4, 0, 0, 17);
     g.addColorStop(0, '#fff176');
     g.addColorStop(0.45, '#fdd835');
     g.addColorStop(1, '#fbc02d');
@@ -317,21 +320,17 @@
     ctx.stroke();
 
     // belly patch
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
     ctx.beginPath();
-    ctx.ellipse(-3, 5, 9, 6, 0.2, 0, Math.PI * 2);
+    ctx.ellipse(-3, 6, 9, 6, 0.2, 0, Math.PI * 2);
     ctx.fill();
 
-    // crest feathers on head
+    // head tuft (single small feather, not antennae)
     ctx.fillStyle = '#fdd835';
     ctx.strokeStyle = '#f57f17';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.ellipse(-2, -15, 3, 8, -0.35, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(5, -14, 3, 7, 0.25, 0, Math.PI * 2);
+    ctx.ellipse(0, -16, 4, 6, 0.1, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
@@ -341,40 +340,44 @@
     ctx.save();
     ctx.translate(-4, 3);
     ctx.rotate(wingAngle);
-    ctx.fillStyle = '#fff9c4';
+    ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = '#f57f17';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.ellipse(0, 0, 13, 9, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = '#fdd835';
-    for (let i = -1; i <= 1; i++) {
-      ctx.beginPath();
-      ctx.moveTo(-3, i * 4);
-      ctx.quadraticCurveTo(8, i * 4 + 2, 10, i * 4 + 6);
-      ctx.quadraticCurveTo(4, i * 4 + 2, -3, i * 4 + 3);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
-
-    // beak
-    ctx.fillStyle = '#ef6c00';
-    ctx.strokeStyle = '#bf360c';
+    // wing feather line
+    ctx.strokeStyle = '#fdd835';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(13, -1);
-    ctx.lineTo(24, 3);
-    ctx.lineTo(13, 7);
+    ctx.moveTo(-8, -2);
+    ctx.quadraticCurveTo(0, 2, 8, -3);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-8, 3);
+    ctx.quadraticCurveTo(0, 7, 8, 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // beak (small, bird-like, two-tone)
+    ctx.fillStyle = '#ff9800';
+    ctx.strokeStyle = '#e65100';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(11, -2);
+    ctx.lineTo(21, 2);
+    ctx.lineTo(11, 6);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    ctx.strokeStyle = '#bf360c';
+    ctx.fillStyle = '#e65100';
     ctx.beginPath();
-    ctx.moveTo(15, 3);
-    ctx.lineTo(22, 3);
-    ctx.stroke();
+    ctx.moveTo(11, 2);
+    ctx.lineTo(20, 2);
+    ctx.lineTo(11, 6);
+    ctx.closePath();
+    ctx.fill();
 
     // eye
     ctx.fillStyle = '#fff';
@@ -392,32 +395,6 @@
     ctx.beginPath();
     ctx.arc(10.5, -6.5, 1.5, 0, Math.PI * 2);
     ctx.fill();
-
-    // blush
-    ctx.fillStyle = 'rgba(255, 138, 128, 0.35)';
-    ctx.beginPath();
-    ctx.ellipse(-3, 4, 3.5, 2, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // feet
-    ctx.strokeStyle = '#bf360c';
-    ctx.fillStyle = '#ef6c00';
-    ctx.lineWidth = 1.5;
-    function drawFoot(x, y) {
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + 3, y + 8);
-      ctx.lineTo(x + 3, y + 12);
-      ctx.moveTo(x + 3, y + 10);
-      ctx.lineTo(x, y + 12);
-      ctx.moveTo(x + 3, y + 10);
-      ctx.lineTo(x + 6, y + 11);
-      ctx.moveTo(x + 3, y + 10);
-      ctx.lineTo(x + 3, y + 13);
-      ctx.stroke();
-    }
-    drawFoot(-4, 12);
-    drawFoot(6, 12);
 
     ctx.restore();
   }
