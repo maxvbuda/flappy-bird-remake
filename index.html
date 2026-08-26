@@ -282,19 +282,19 @@
   function drawBird() {
     ctx.save();
     ctx.translate(bird.x, bird.y);
-    const rot = Math.min(Math.PI / 3.5, Math.max(-Math.PI / 4, bird.vy * 0.06));
+    const rot = Math.min(Math.PI / 3.5, Math.max(-Math.PI / 4, bird.vy * 0.06 - 0.12));
     ctx.rotate(rot);
 
-    // tail feathers (crow fan)
+    // tail feathers (spread crow tail)
     ctx.fillStyle = '#212121';
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 1.5;
     for (let i = 0; i < 3; i++) {
       ctx.save();
-      ctx.translate(-12, -4 + i * 4);
-      ctx.rotate(-0.35 + i * 0.2);
+      ctx.translate(-12, -5 + i * 5);
+      ctx.rotate(-0.45 + i * 0.25);
       ctx.beginPath();
-      ctx.ellipse(-8, 0, 12, 4.5, 0, 0, Math.PI * 2);
+      ctx.ellipse(-8, 0, 13, 4.5, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
       ctx.restore();
@@ -313,24 +313,50 @@
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    // wing
+    // far wing (tip visible behind back)
+    ctx.save();
+    ctx.translate(4, 0);
+    ctx.rotate(-0.4);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(12, -24, 30, -14);
+    ctx.quadraticCurveTo(18, -4, 6, 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    // near wing (main flight wing, raised and flapping)
     const flapSpeed = 0.3;
-    const wingAngle = gameOver ? 0.15 : Math.sin((frame - lastFlap) * flapSpeed) * 0.55;
+    const wingAngle = gameOver ? -0.6 : -0.75 + Math.sin((frame - lastFlap) * flapSpeed) * 0.45;
     ctx.save();
     ctx.translate(-5, 5);
     ctx.rotate(wingAngle);
     ctx.fillStyle = '#212121';
     ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.ellipse(0, 0, 12, 8, 0, 0, Math.PI * 2);
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(10, -34, 38, -18); // leading edge
+    ctx.lineTo(26, -8);
+    ctx.quadraticCurveTo(12, -4, 0, 0); // trailing edge
+    ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    // wing sheen
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    // primary feathers
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.ellipse(2, -2, 6, 3, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(4, -4);
+    ctx.quadraticCurveTo(16, -28, 36, -17);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(10, -5);
+    ctx.quadraticCurveTo(18, -24, 30, -14);
+    ctx.stroke();
     ctx.restore();
 
     // head
